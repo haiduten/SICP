@@ -1,0 +1,39 @@
+
+Prove Fib (n) = (p^n - w^n)/ sqrt 5
+where
+p = (1 + swrt 5) / 2
+w = (1 - sqrt 5) / 2
+
+Base case n = 0. Fib(0) should be 0
+(p^0 - w^0) / sqrt 5 => (1 - 1) / sqrt 5 => 0 / sqrt 5 => 0.
+
+Base case n = 1. Fib(1) should be 1
+(p^1 - w^1) / sqrt 5 => (p - w) / sqrt 5 => (((1 + sqrt 5) / 2) - ((1 - sqrt 5) / 2)) / sqrt 5 => (2 * sqrt 5 /2) / sqrt 5 => 1
+
+Prove for Fib(n) = (p^n - w^n)/ sqrt 5
+Inductive hypothesese:
+Fib(n - 1) = (p^(n-1) - w^(n-1))/ sqrt 5
+Fib(n - 2) = (p^(n-2) - w^(n-2))/ sqrt 5
+
+Fib (n) = Fib (n- 1) + Fib (n - 2) =>
+(p^(n-1) - w^(n-1))/ sqrt 5 + (p^(n-2) - w^(n-2))/ sqrt 5 =>
+((p^(n-1) + p^(n-2)) - (w^(n-1) + w^(n-2)) / sqrt 5 =>
+((p^(n-2) * (p + 1)) - (w^(n-2) * (w + 1))) / sqrt 5 =>
+
+Proof p^2 =  p + 1
+((1 + sqrt 5) / 2)^ 2 => (1 + 2 * sqrt 5 + 5) / 4 =>  (4 + 2 + 2 * sqrt 5 ) / 4 => (2 + 1 + sqrt 5 ) / 2 => 2 / 2 + (1 + sqrt 5 ) / 2 => 1 + p => p + 1
+
+Proof q^2 =  q + 1
+((1 - sqrt 5) / 2)^ 2 => (1 - 2 * sqrt 5 + 5) / 4 => (4 + 2 - 2 * sqrt 5 ) / 4 => (2 + 1 - sqrt 5 ) / 2 => 2 / 2 + (1 - sqrt 5 ) / 2 => 1 + q => q + 1
+
+((p^(n-2) * p^2 ) - (w^(n-2) * w^2)) / sqrt 5 => (p^(n-2  + 2) - w^(n-2+2)) / sqrt 5 =>  (p^(n) - w^(n)) / sqrt 5
+
+
+abs (((p^n - w^n)/ sqrt 5) - p^n/ sqr 5) <= 1/2
+
+w^n/ sqrt 5 < 1/2
+
+abs(((1 - sqrt 5)/ 2)^n) /sqrt 5 < 1/ 2
+abs ((1 - sqrt 5)/ 2)^n < sqrt 5 / 2
+0.61803398875^n < 1.11803398875
+Since 0.61803398875 < 1, 0.61803398875^n will be less than < 1, and 1< 1.11803398875, so by true by transitivity

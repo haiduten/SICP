@@ -1,0 +1,23 @@
+#lang racket
+(define (deriv g)
+  (lambda (x)
+    (/ (- (g (+ x dx)) (g x))
+       dx)))
+
+(define (newton-transform g)
+  (lambda (x)
+    (- x (/ (g x) 
+            ((deriv g) x)))))
+
+(define (newtons-method g guess)
+  (fixed-point (newton-transform g) 
+               guess))
+
+
+(define (cube n) (* n n n))
+(define (square n) (* n n))
+
+(define (cubicpoly a b c)
+  (
+   (let ((f (lambda x (+ (cube x) (* a (square x)) (* b x) c)))))
+   (newtons-method f 1)))
