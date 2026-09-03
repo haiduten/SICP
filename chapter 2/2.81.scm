@@ -7,6 +7,36 @@
 
 ;3
 
+(define operation-table (make-hash))
+
+(define (put operation type-signature procedure)
+  (hash-set! operation-table
+             (list operation type-signature)
+             procedure))
+
+(define (get operation type-signature)
+  (hash-ref operation-table
+            (list operation type-signature)
+            #f))
+
+(define (attach-tag type-tag contents)
+  (if (equal? type-tag 'scheme-number) contents
+  (cons type-tag contents)))
+
+(define (type-tag datum)
+  (if (number? datum) 'scheme-number 
+  (if (pair? datum)
+      (car datum)
+      (error "Bad tagged datum: 
+              TYPE-TAG" datum))))
+
+(define (contents datum)
+  (if (number? datum) datum
+  (if (pair? datum)
+      (cdr datum)
+      (error "Bad tagged datum: 
+              CONTENTS" datum))))
+
 (define (apply-generic op . args)
   (let ((type-tags (map type-tag args)))
     (let ((proc (get op type-tags)))

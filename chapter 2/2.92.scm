@@ -81,6 +81,7 @@
 
 (put 'mul '(scheme-number scheme-number) (lambda (x y) (* x y)))
 
+
 (put '=zero? '(scheme-number) (lambda (x ) (equal? x 0)))
   ;; internal procedures
   ;; representation of poly
@@ -109,6 +110,14 @@
 (define (order term) (car term))
 (define (coeff term) (cadr term))
 
+(define (zero-coeffs x)
+  (if (empty-termlist? x) true
+      (let ((first (first-term x))
+            (rest (rest-terms x))
+            )
+        (if (=zero? (coeff first)) (zero-coeffs rest) false)))) 
+
+(put '=zero? '(polynomial) (lambda (x) (or (empty-termlist? (term-list x)) (zero-coeffs (term-list x)))))
 
 
 (define (raise-poly-y-to-x poly)
@@ -219,15 +228,11 @@
 (define (raise x)
   (apply-generic 'raise x))
 
-(define (zero-coeffs x)
-  (if (empty-termlist? x) true
-      (let ((first (first-term x))
-            (rest (rest-terms x))
-            )
-        (if (=zero? (coeff first)) (zero-coeffs rest) false)))) 
 
-(put '=zero? '(polynomial) (lambda (x) (or (empty-termlist? (term-list x)) (zero-coeffs (term-list x)))))
 
-(=zero? (make-polynomial 'x (adjoin-term (make-term 1 3) (the-empty-termlist))))
-(=zero? (make-polynomial 'x (the-empty-termlist)))
-(=zero? (make-polynomial 'x (adjoin-term (make-term 1 0) (the-empty-termlist))))
+(define 3x (make-polynomial 'x (adjoin-term (make-term 1 3) (the-empty-termlist))))
+(define 3y (make-polynomial 'y (adjoin-term (make-term 1 3) (the-empty-termlist))))
+(define 4x (make-polynomial 'x (adjoin-term (make-term 1 4) (the-empty-termlist))))
+(define 1y (make-polynomial 'y (adjoin-term (make-term 1 1) (the-empty-termlist))))
+(add 3y 4x)
+(mul 3y 4x)

@@ -35,3 +35,4 @@
 (define p2 (make-point 10 10))
 (define line (make-segment p1 p2))
 (print-point (midpoint-segment line))
+

@@ -1,4 +1,5 @@
 #lang racket
+
 ;; Operation table
 (define operation-table (make-hash))
 
@@ -68,11 +69,53 @@
       contents
       (cons type-tag contents)))
 
+(define (rational-number-package)
+  ;; internal procedures
+  (define (numer x) (car x))
+  (define (denom x) (cdr x))
+  (define (make-rat n d)
+      (cons n d))
+  (define (add-rat x y)
+    (make-rat (add (mul (numer x) (denom y))
+                 (mul (numer y) (denom x)))
+              (mul (denom x) (denom y))))
+  (define (sub-rat x y)
+    (make-rat (sub (mul (numer x) (denom y))
+                 (mul (numer y) (denom x)))
+              (mul (denom x) (denom y))))
+  (define (mul-rat x y)
+    (make-rat (mul (numer x) (numer y))
+              (mul (denom x) (denom y))))
+  (define (div-rat x y)
+    (make-rat (mul (numer x) (denom y))
+              (mul (denom x) (numer y))))
+  ;; interface to rest of the system
+  (define (tag x) (attach-tag 'rational x))
+  (put 'add '(rational rational)
+       (lambda (x y) (tag (add-rat x y))))
+  (put 'sub '(rational rational)
+       (lambda (x y) (tag (sub-rat x y))))
+  (put 'mul '(rational rational)
+       (lambda (x y) (tag (mul-rat x y))))
+  (put 'div '(rational rational)
+       (lambda (x y) (tag (div-rat x y))))
+  (put 'make 'rational
+       (lambda (n d) (tag (make-rat n d)))))
+
+(rational-number-package)
+
+(define (make-rational n d)
+  ((get 'make 'rational) n d))
+
+
 (define (=zero? x)
   (apply-generic '=zero? x))
 
 (define (add x y)
   (apply-generic 'add x y))
+
+(define (sub x y)
+  (apply-generic 'sub x y))
 
 (put 'add '(scheme-number scheme-number) (lambda (x y) (+ x y)))
 
@@ -80,6 +123,7 @@
   (apply-generic 'mul x y))
 
 (put 'mul '(scheme-number scheme-number) (lambda (x y) (* x y)))
+
 
 (put '=zero? '(scheme-number) (lambda (x ) (equal? x 0)))
   ;; internal procedures
@@ -109,6 +153,14 @@
 (define (order term) (car term))
 (define (coeff term) (cadr term))
 
+(define (zero-coeffs x)
+  (if (empty-termlist? x) true
+      (let ((first (first-term x))
+            (rest (rest-terms x))
+            )
+        (if (=zero? (coeff first)) (zero-coeffs rest) false)))) 
+
+(put '=zero? '(polynomial) (lambda (x) (or (empty-termlist? (term-list x)) (zero-coeffs (term-list x)))))
 
 
 (define (raise-poly-y-to-x poly)
@@ -219,15 +271,9 @@
 (define (raise x)
   (apply-generic 'raise x))
 
-(define (zero-coeffs x)
-  (if (empty-termlist? x) true
-      (let ((first (first-term x))
-            (rest (rest-terms x))
-            )
-        (if (=zero? (coeff first)) (zero-coeffs rest) false)))) 
 
-(put '=zero? '(polynomial) (lambda (x) (or (empty-termlist? (term-list x)) (zero-coeffs (term-list x)))))
 
-(=zero? (make-polynomial 'x (adjoin-term (make-term 1 3) (the-empty-termlist))))
-(=zero? (make-polynomial 'x (the-empty-termlist)))
-(=zero? (make-polynomial 'x (adjoin-term (make-term 1 0) (the-empty-termlist))))
+(define p1 (make-polynomial 'x '((2 1) (0 1))))
+(define p2 (make-polynomial 'x '((3 1) (0 1))))
+(define rf (make-rational p2 p1))
+(add rf rf)

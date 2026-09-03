@@ -1,7 +1,160 @@
 #lang racket
+(define (mul a b) (apply-generic 'mul a b))
+(define (sub a b) (apply-generic 'sub a b))
+(define (div a b) (apply-generic 'div a b))
 (define (square n)
   (mul n n))
 
+
+(define operation-table (make-hash))
+
+(define (put operation type-signature procedure)
+  (hash-set! operation-table
+             (list operation type-signature)
+             procedure))
+
+(define (get operation type-signature)
+  (hash-ref operation-table
+            (list operation type-signature)
+            #f))
+
+(define (attach-tag type-tag contents)
+  (if (equal? type-tag 'scheme-number) contents
+  (cons type-tag contents)))
+
+(define (type-tag datum)
+  (if (number? datum) 'scheme-number 
+  (if (pair? datum)
+      (car datum)
+      (error "Bad tagged datum: 
+              TYPE-TAG" datum))))
+
+(define (contents datum)
+  (if (number? datum) datum
+  (if (pair? datum)
+      (cdr datum)
+      (error "Bad tagged datum: 
+              CONTENTS" datum))))
+
+(define (install-scheme-number-package)
+  (define (tag x)
+    (attach-tag 'scheme-number x))
+  (put 'add '(scheme-number scheme-number)
+       (lambda (x y) (tag (+ x y))))
+  (put 'sub '(scheme-number scheme-number)
+       (lambda (x y) (tag (- x y))))
+  (put 'mul '(scheme-number scheme-number)
+       (lambda (x y) (tag (* x y))))
+  (put 'div '(scheme-number scheme-number)
+       (lambda (x y) (tag (/ x y))))
+  (put 'make 'scheme-number
+       (lambda (x) (tag x))))
+
+(install-scheme-number-package)
+
+  ;; internal procedures
+  (define (numer x) (car x))
+  (define (denom x) (cdr x))
+  (define (make-rat n d)
+    (let ((g (gcd n d)))
+      (cons (/ n g) (/ d g))))
+  (define (add-rat x y)
+    (make-rat (+ (* (numer x) (denom y))
+                 (* (numer y) (denom x)))
+              (* (denom x) (denom y))))
+  (define (sub-rat x y)
+    (make-rat (- (* (numer x) (denom y))
+                 (* (numer y) (denom x)))
+              (* (denom x) (denom y))))
+  (define (mul-rat x y)
+    (make-rat (* (numer x) (numer y))
+              (* (denom x) (denom y))))
+  (define (div-rat x y)
+    (make-rat (* (numer x) (denom y))
+              (* (denom x) (numer y))))
+  ;; interface to rest of the system
+  (define (tag x) (attach-tag 'rational x))
+  (put 'add '(rational rational)
+       (lambda (x y) (tag (add-rat x y))))
+  (put 'sub '(rational rational)
+       (lambda (x y) (tag (sub-rat x y))))
+  (put 'mul '(rational rational)
+       (lambda (x y) (tag (mul-rat x y))))
+  (put 'div '(rational rational)
+       (lambda (x y) (tag (div-rat x y))))
+  (put 'make 'rational
+       (lambda (n d) (tag (make-rat n d))))
+
+(define (make-rational n d)
+  ((get 'make 'rational) n d))
+
+
+(define (real-part x) (apply-generic 'real-part x))
+(define (imag-part x) (apply-generic 'imag-part x))
+(define (magnitude x) (apply-generic 'magnitude x))
+
+
+
+(define (make-complex-from-real-imag x y)
+  ((get 'make-from-real-imag 'complex) x y))
+(define (make-complex-from-mag-ang r a)
+  ((get 'make-from-mag-ang 'complex) r a))
+
+
+(define (install-raise)
+(define (raise-integer n)
+  (make-rational  n 1))
+
+(define (raise-rational n)
+  (make-complex-from-real-imag (/ (numer n) (denom n)) 0))
+
+
+(put 'raise '(scheme-number) raise-integer)
+(put 'raise '(rational) raise-rational)
+)
+
+(install-raise)
+
+(define (raise x)
+  (apply-generic 'raise x))
+
+
+(define (typelessthan a1 a2)
+  (define (equalRaise a1 a2)
+    (if (equal? (type-tag a1) (type-tag a2)) true
+        (let ((proc (get 'raise (list (type-tag a1)))))
+          (if proc (equalRaise (proc (contents a1)) a2) false))))
+  (if (equal? (type-tag a1) (type-tag a2)) false (equalRaise a1 a2)))
+
+(define (apply-generic op . args)
+  (let ((type-tags (map type-tag args)))
+    (let ((proc (get op type-tags)))
+      (if proc
+          (apply proc (map contents args))
+          (if (= (length args) 2)
+              (let ((type1 (car type-tags))
+                    (type2 (cadr type-tags))
+                    (a1 (car args))
+                    (a2 (cadr args)))
+                  (cond ((equal? type1 type2) (error "No method for these types"))
+                        ((typelessthan a1 a2)
+                         (apply-generic 
+                          op (raise a1) a2))
+                        ((typelessthan a2 a1)
+                         (apply-generic 
+                          op a1 (raise a2)))
+                        (else
+                         (error 
+                          "No method for 
+                           these types"
+                          (list 
+                           op 
+                           type-tags)))))
+              (error 
+               "No method for these types"
+               (list op type-tags)))))))
+
+(define (add x y) (apply-generic 'add x y))
 
 (put 'sqrt '(scheme-number) (lambda (x) (sqrt x)))
 (put 'sqrt '(rational) (lambda (x) (sqrt (/ (numer x) (denom x)))))
@@ -45,7 +198,8 @@
   (put 'make-from-mag-ang 'rectangular
        (lambda (r a) 
          (tag (make-from-mag-ang r a))))
-  'done)
+ )
+(install-rectangular-package)
 
 
 (define (install-polar-package)
@@ -72,7 +226,8 @@
   (put 'make-from-mag-ang 'polar
        (lambda (r a) 
          (tag (make-from-mag-ang r a))))
-  'done)
+)
+(install-polar-package)
 
 
 (define (install-complex-package)
@@ -122,4 +277,8 @@
   (put 'make-from-mag-ang 'complex
        (lambda (r a) 
          (tag (make-from-mag-ang r a))))
-  'done)
+)
+(install-complex-package)
+
+
+(add  (make-complex-from-real-imag (make-rational 3 1) 1) (make-complex-from-real-imag 1 1))

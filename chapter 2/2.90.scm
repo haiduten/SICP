@@ -1,5 +1,4 @@
 #lang racket
-;; Operation table
 (define operation-table (make-hash))
 
 (define (put operation type-signature procedure)
@@ -74,12 +73,25 @@
 (define (add x y)
   (apply-generic 'add x y))
 
+
+  (define (tag p) (attach-tag 'polynomial p))
+  (put 'add '(polynomial polynomial)
+       (lambda (p1 p2) 
+         (tag (add-poly p1 p2))))
+  (put 'mul '(polynomial polynomial)
+       (lambda (p1 p2) 
+         (tag (mul-poly p1 p2))))
+  (put 'make 'polynomial
+       (lambda (var terms) 
+         (tag (make-poly var terms))))
+
 (put 'add '(scheme-number scheme-number) (lambda (x y) (+ x y)))
 
 (define (mul x y)
   (apply-generic 'mul x y))
 
 (put 'mul '(scheme-number scheme-number) (lambda (x y) (* x y)))
+
 
 (put '=zero? '(scheme-number) (lambda (x ) (equal? x 0)))
   ;; internal procedures
@@ -94,25 +106,23 @@
        (variable? v2)
        (eq? v1 v2)))
 
-  ;; representation of terms and term lists
-(define (adjoin-term term term-list)
-  (if (=zero? (coeff term))
-      term-list
-      (cons term term-list)))
-(define (the-empty-termlist) '())
-(define (first-term term-list) (car term-list))
-(define (rest-terms term-list) (cdr term-list))
-(define (empty-termlist? term-list) 
-  (null? term-list))
-(define (make-term order coeff) 
-  (list order coeff))
-(define (order term) (car term))
-(define (coeff term) (cadr term))
+
+(define (zero-coeffs x)
+  (if (empty-termlist? x) true
+      (let ((first (first-term x))
+            (rest (rest-terms x))
+            )
+        (if (=zero? (coeff first)) (zero-coeffs rest) false)))) 
+
+(put '=zero? '(polynomial) (lambda (x) (or (empty-termlist? (term-list x)) (zero-coeffs (term-list x)))))
+
+(define (make-polynomial var terms)
+  ((get 'make 'polynomial) var terms))
 
 
 
 (define (raise-poly-y-to-x poly)
-  (make-polynomial 'x (adjoin-term (make-term 0 (tag poly)) (the-empty-termlist))))
+  (make-polynomial 'x (adjoin-term (make-term 0 (tag poly)) (the-empty-termlist-dense))))
 
 (put 'raise 'y raise-poly-y-to-x)
 
@@ -150,6 +160,85 @@
             ((polylessthan p2 p1) (mul-poly p1 (contents (raise-poly p2))))
             (else (error "something went wrong")))))
 
+;----------------------------------------------
+(define (make-term order coeff) 
+  (list order coeff))
+(define (order term) (car term))
+(define (coeff term) (cadr term))
+
+(define (install-sparse-package)
+  (define (adjoin-term term term-list)
+  (if (=zero? (coeff term))
+      term-list
+      (cons term term-list)))
+(define (the-empty-termlist) '())
+(define (first-term term-list) (car term-list))
+(define (rest-terms term-list) (cdr term-list))
+(define (empty-termlist? term-list) 
+  (null? term-list))
+(define (tag x) (attach-tag 'sparse x))
+
+(put 'adjoin-term 'sparse (lambda (x y) (tag (adjoin-term x y))))
+(put 'the-empty-termlist 'sparse (lambda () (tag (the-empty-termlist))))
+(put 'first-term  'sparse (lambda (x) (first-term x)))
+(put 'rest-terms 'sparse (lambda (x) (tag (rest-terms x))))
+(put 'empty-termlist? 'sparse (lambda (x) (empty-termlist? x))) 'done)
+(install-sparse-package)
+
+(define (install-dense-package)
+(define (first-term term-list)
+  (if (null? term-list)
+      null
+      (make-term (- (length term-list) 1) (car term-list))))
+
+(define (rest-terms term-list) (cdr term-list))
+
+(define (empty-termlist? term-list) 
+  (null? term-list))
+
+(define (the-empty-termlist) '())
+
+(define (adjoin-term term term-list)
+  (if (=zero? (coeff term)) term-list
+  (if (= (order term) (length term-list)) (cons (coeff term) term-list)
+      (adjoin-term term (cons 0 term-list)))))
+(define (tag x) (attach-tag 'dense x))
+
+(put 'adjoin-term 'dense (lambda (x y) (tag (adjoin-term x y))))
+(put 'the-empty-termlist 'dense (lambda () (tag (the-empty-termlist))))
+(put 'first-term  'dense (lambda (x) (first-term x)))
+(put 'rest-terms 'dense (lambda (x) (tag (rest-terms x))))
+(put 'empty-termlist? 'dense (lambda (x) (empty-termlist? x))) 'done)
+(install-dense-package)
+
+(define (the-empty-termlist-dense) ((get 'the-empty-termlist 'dense)))
+(define (the-empty-termlist-sparse) ((get 'the-empty-termlist 'sparse)))
+(define (adjoin-term x y) ((get 'adjoin-term (type-tag y)) x (contents y)))
+(define (first-term x) ((get 'first-term (type-tag x)) (contents x)))
+(define (rest-terms x) ((get 'rest-terms (type-tag x)) (contents x)))
+(define (empty-termlist? x) ((get 'empty-termlist? (type-tag x)) (contents x)))
+
+
+(define (mul-terms L1 L2)
+  (if (empty-termlist? L1)
+      (the-empty-termlist-dense L1)
+      (add-terms 
+       (mul-term-by-all-terms 
+        (first-term L1) L2)
+       (mul-terms (rest-terms L1) L2))))
+
+(define (mul-term-by-all-terms t1 L)
+  (if (empty-termlist? L)
+      (the-empty-termlist-dense L)
+      (let ((t2 (first-term L)))
+        (adjoin-term
+         (make-term 
+          (+ (order t1) (order t2))
+          (mul (coeff t1) (coeff t2)))
+         (mul-term-by-all-terms 
+          t1 
+          (rest-terms L))))))
+
 (define (add-terms L1 L2)
   (cond ((empty-termlist? L1) L2)
         ((empty-termlist? L2) L1)
@@ -177,57 +266,7 @@
                     (rest-terms L1)
                     (rest-terms L2)))))))))
 
-(define (mul-terms L1 L2)
-  (if (empty-termlist? L1)
-      (the-empty-termlist)
-      (add-terms 
-       (mul-term-by-all-terms 
-        (first-term L1) L2)
-       (mul-terms (rest-terms L1) L2))))
 
-(define (mul-term-by-all-terms t1 L)
-  (if (empty-termlist? L)
-      (the-empty-termlist)
-      (let ((t2 (first-term L)))
-        (adjoin-term
-         (make-term 
-          (+ (order t1) (order t2))
-          (mul (coeff t1) (coeff t2)))
-         (mul-term-by-all-terms 
-          t1 
-          (rest-terms L))))))
-
-  ;; interface to rest of the system
-  (define (tag p) (attach-tag 'polynomial p))
-  (put 'add '(polynomial polynomial)
-       (lambda (p1 p2) 
-         (tag (add-poly p1 p2))))
-  (put 'mul '(polynomial polynomial)
-       (lambda (p1 p2) 
-         (tag (mul-poly p1 p2))))
-  (put 'make 'polynomial
-       (lambda (var terms) 
-         (tag (make-poly var terms))))
-
-(define (make-polynomial var terms)
-  ((get 'make 'polynomial) var terms))
-
-(define (raise-number n)
-  (make-polynomial 'y (adjoin-term (make-term 0 n) (the-empty-termlist))))
-
-(put 'raise '(scheme-number) raise-number)
-(define (raise x)
-  (apply-generic 'raise x))
-
-(define (zero-coeffs x)
-  (if (empty-termlist? x) true
-      (let ((first (first-term x))
-            (rest (rest-terms x))
-            )
-        (if (=zero? (coeff first)) (zero-coeffs rest) false)))) 
-
-(put '=zero? '(polynomial) (lambda (x) (or (empty-termlist? (term-list x)) (zero-coeffs (term-list x)))))
-
-(=zero? (make-polynomial 'x (adjoin-term (make-term 1 3) (the-empty-termlist))))
-(=zero? (make-polynomial 'x (the-empty-termlist)))
-(=zero? (make-polynomial 'x (adjoin-term (make-term 1 0) (the-empty-termlist))))
+(define x3dense (make-polynomial 'x (adjoin-term (make-term 1 3) (the-empty-termlist-dense))))
+(define x3sparse (make-polynomial 'x (adjoin-term (make-term 1 3) (the-empty-termlist-sparse))))
+(add x3dense x3sparse)

@@ -6,7 +6,7 @@
 (define (lower-bound int) (car int))
 
 
-(define (width a) (/ (- (upper-bound a) (lower-bound b)) 2.0))
+(define (width a) (/ (- (upper-bound a) (lower-bound a)) 2.0))
 
 (define (width-add a b)
   (+ (width a) (width b)))
