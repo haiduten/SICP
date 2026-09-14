@@ -1,0 +1,41 @@
+#lang racket
+(define (make-account balance password)
+  (define tries 0)
+  (define (withdraw amount)
+    (set! tries 0)
+    (if (>= balance amount)
+        (begin (set! balance 
+                     (- balance amount))
+               balance)
+        "Insufficient funds"))
+  (define (deposit amount)
+    (set! balance (+ balance amount))
+    (set! tries 0)
+    balance)
+  (define (badpassword x)
+    (set! tries (+ tries 1))
+    (display "Incorrect password")
+    (newline))
+  (define (call-the-cops x)
+    (display "calling the cops"))
+  (define (dispatch passcode m)
+    (cond ((and (= tries 6) (not (eq? passcode password))) call-the-cops)
+          ((not (eq? passcode password)) badpassword)
+          ((eq? m 'withdraw) withdraw)
+          ((eq? m 'deposit) deposit)
+          (else (error "Unknown request: 
+                 MAKE-ACCOUNT" m))))
+  dispatch)
+
+(define acc 
+  (make-account 100 'secret-password))
+
+((acc 'secret-password 'withdraw) 40)
+
+((acc 'some-other-password 'deposit) 50)
+((acc 'some-other-password 'deposit) 50)
+((acc 'some-other-password 'deposit) 50)
+((acc 'some-other-password 'deposit) 50)
+((acc 'some-other-password 'deposit) 50)
+((acc 'some-other-password 'deposit) 50)
+((acc 'some-other-password 'deposit) 50)
