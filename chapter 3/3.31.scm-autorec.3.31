@@ -1,0 +1,61 @@
+#lang sicp
+; if it you do not initialize immediately, then then the initialization will happen in reverse order
+
+(define (half-adder a b s c)
+  (let ((d (make-wire)) (e (make-wire)))
+    (or-gate a b d)
+    (and-gate a b c)
+    (inverter c e)
+    (and-gate d e s)
+    'ok))
+
+
+; (probe 'sum sum)
+; (probe 'carry carry)
+; it will not return anything
+
+
+; start
+; a 0
+; b 0
+; c 0
+; d 0 
+; e 0
+; s 0
+
+
+; init
+; a 0
+; b 0
+; c 0
+; d 0 
+; e 1
+; s 0
+
+;(set-signal! input-1 1)
+; a 1
+; b 0
+; c 0
+; d 1
+; e 1
+; s 1
+
+; start
+; a 0
+; b 0
+; c 0
+; d 0 
+; e 0
+; s 0
+
+;(set-signal! input-1 1)
+; a 1
+; b 0
+; c 0
+; d 1
+; e 0
+; s 0
+
+
+
+
