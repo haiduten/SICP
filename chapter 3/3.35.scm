@@ -6,9 +6,21 @@
             (error "square less than 0: 
                     SQUARER" 
                    (get-value b))
-            ⟨alternative1⟩)
-        ⟨alternative2⟩))
-  (define (process-forget-value) ⟨body1⟩)
-  (define (me request) ⟨body2⟩)
-  ⟨rest of definition⟩
+            (set-value! a (sqrt (get-value b) me)))
+        (if (has-value? a) (set-value! b (* (get-value a) (get-value a) me) null))))
+  (define (process-forget-value)
+    (forget-value! a me)
+    (forget-value! b me)
+    (process-new-value))
+  (define (me request)
+    (cond ((eq? request 'I-have-a-value)
+           (process-new-value))
+          ((eq? request 'I-lost-my-value)
+           (process-forget-value))
+          (else
+           (error "Unknown request: 
+                   SQUARER" 
+                  request))))
+  (connect a me)
+  (connect b me)
   me)
