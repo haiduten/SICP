@@ -58,8 +58,6 @@
 ;136
 (stream-ref y 7)
 
-
-
 (define (stream-for-each proc s)
   (if (stream-null? s)
       'done
