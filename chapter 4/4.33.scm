@@ -1,1 +1,42 @@
 #lang sicp
+(define (quoted-list? exp)
+  (and (tagged-list? exp 'quote) (pair? (cadr exp))))
+
+(define (quoted-list->cons exp)
+  (if (null? exp)
+      (list 'quote exp)
+      (list 'cons (list 'quote (car exp)) (quoted-list->cons (cdr exp)))))
+
+(define (eval exp env)
+  (cond ((self-evaluating? exp) 
+         exp)
+        ((variable? exp) 
+         (lookup-variable-value exp env))
+        ((quoted-list? exp)
+         (eval (quoted-list->cons (cadr exp)) env))
+        ((quoted? exp) 
+         (text-of-quotation exp))
+        ((assignment? exp) 
+         (eval-assignment exp env))
+        ((definition? exp) 
+         (eval-definition exp env))
+        ((if? exp) 
+         (eval-if exp env))
+        ((lambda? exp)
+         (make-procedure 
+          (lambda-parameters exp)
+          (lambda-body exp)
+          env))
+        ((begin? exp)
+         (eval-sequence 
+          (begin-actions exp) 
+          env))
+        ((cond? exp) 
+         (eval (cond->if exp) env))
+        ((application? exp)
+         (apply (actual-value (operator exp) env)
+                (operands exp)
+                env))
+        (else
+         (error "Unknown expression 
+                 type: EVAL" exp))))

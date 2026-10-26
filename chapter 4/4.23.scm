@@ -28,3 +28,14 @@
                 ANALYZE"))
     (lambda (env) 
       (execute-sequence procs env))))
+
+; when the sequence just has one expression:
+; Text's will just return the first expression
+
+; Alyssa's will create another frame and check if there is another expression and then execute the expression
+
+; when the sequence just has two expression
+; Text's will return a lambda with the analyed version of both expression as the body. The first analyzed expression is executed, then the second.
+
+; Allyssa's will check if there is another expression, then execute the first,
+; then get the rest of the expression list, check if there is another expression left, then execute the seceond

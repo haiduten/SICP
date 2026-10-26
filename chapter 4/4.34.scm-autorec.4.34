@@ -1,0 +1,105 @@
+#lang sicp
+(define input-prompt  ";;; L-Eval input:")
+(define output-prompt ";;; L-Eval value:")
+
+(define (cons? exp)
+  (tagged-list? exp 'cons))
+
+(define (car? exp)
+  (tagged-list? exp 'car))
+
+(define (cdr? exp)
+  (tagged-list? exp 'cdr))
+
+(define (eval-car exp)
+  (list exp (list 'qouted 'car)))
+
+(define (eval-cdr exp)
+  (list exp (list 'qouted 'cdr)))
+
+(define (cons->lambda exp)
+  (list 'lambda
+        (list 'm)
+        (list 'cond
+              (list (list 'eq? 'm (list 'qouted 'car)) (cadr exp))
+              (list (list 'eq? 'm (list 'qouted 'cdr)) (caddr exp)))))
+
+(define (eval exp env)
+  (cond ((self-evaluating? exp) 
+         exp)
+        ((variable? exp) 
+         (lookup-variable-value exp env))
+        ((quoted-list? exp)
+         (eval (quoted-list->cons (cadr exp)) env))
+        ((quoted? exp) 
+         (text-of-quotation exp))
+        ((assignment? exp) 
+         (eval-assignment exp env))
+        ((definition? exp) 
+         (eval-definition exp env))
+        ((if? exp) 
+         (eval-if exp env))
+        ((car? exp)
+         (eval-car exp env))
+        ((cdr? exp)
+         (eval-cdr exp env))
+        ((cons? exp)
+         (eval (cons->lambda exp) env))
+        ((lambda? exp)
+         (make-procedure 
+          (lambda-parameters exp)
+          (lambda-body exp)
+          env))
+        ((begin? exp)
+         (eval-sequence 
+          (begin-actions exp) 
+          env))
+        ((cond? exp) 
+         (eval (cond->if exp) env))
+        ((application? exp)
+         (apply (actual-value (operator exp) env)
+                (operands exp)
+                env))
+        (else
+         (error "Unknown expression 
+                 type: EVAL" exp))))
+  
+
+(define (driver-loop)
+  (prompt-for-input input-prompt)
+  (let ((input (read)))
+    (let ((output (actual-value 
+                   input 
+                   the-global-environment)))
+      (announce-output output-prompt)
+      (user-print output))))
+  (driver-loop))
+
+(define (cons-procedure? exp)
+  (and (compound-procedure? object)
+       (let ((body (procedure-body object)))
+         (let ((clauses (cond-clauses body)))
+           (and
+            (eq? (cond-predicate (car clauses)) 'car)
+            (eq? (cond-predicate (cadr clauses)) 'cdr))))))
+
+(define (cons-print exp)
+  (define (helper count lst-exp)
+    (if (= count 0)
+        (display lst-exp)
+        (begin
+          (user-print (actual-value (list 'car lst-exp) (procedure-environment lst-exp)))
+          (display ',)
+          (helper (+ count 1) (actual-value (list 'cdr lst-exp) env)))))
+  (helper 20 exp))
+    
+(define (user-print object)
+  (cond
+    ((cons-procedure? object) (cons-print exp))
+    ((compound-procedure? object)
+      (display 
+       (list 'compound-procedure
+             (procedure-parameters object)
+             (procedure-body object)
+             '<procedure-env>)))
+      (else (display object))))
